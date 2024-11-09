@@ -44,7 +44,7 @@ This repository contains multiple CloudFormation templates designed to help set 
 
 ### Key Components
 - **IAM Role and Instance Profile**:
-  - `SSMInstanceRole` and `SSMInstanceProfile`: Provides SSM access for the EC2 instance.
+  - `SSMInstanceRole` and `SSMInstanceProfile`: Provides SSM access for the EC2 instance. It also provides Get Access to S3 files needed deployment artifacts.
 - **Security Group**:
   - `MyInstanceSecurityGroup`: Allows HTTP traffic on port 80.
 - **EC2 Instance**:
