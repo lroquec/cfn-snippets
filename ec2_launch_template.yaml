@@ -52,6 +52,8 @@ Resources:
       Tags:
         - Key: Name
           Value: EC2_Apache
+        - Key: env
+          Value: dev
 
   MyLaunchTemplate:
     Type: 'AWS::EC2::LaunchTemplate'
