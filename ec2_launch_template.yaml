@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: A template to create an EC2 instance with Apache installed and a test html page
+
 Resources:
   SSMInstanceRole:
     Type: 'AWS::IAM::Role'
@@ -14,6 +15,16 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+      Policies:
+        - PolicyName: 'SSMInstanceRoleS3AccessPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                Resource: 'arn:aws:s3:::*/*'
 
   SSMInstanceProfile:
     Type: 'AWS::IAM::InstanceProfile'
@@ -85,7 +96,7 @@ Resources:
                     <h1>Test header</h1>
                     <p>Test paragraph</p>
                 </body>
-                </html>              
+                </html>
     Properties:
       LaunchTemplateData:
         ImageId: ami-0ebfd941bbafe70c6
@@ -108,9 +119,6 @@ Resources:
               chmod +x ./install
               ./install auto
               systemctl enable codedeploy-agent --now
-              
-              
-              
 
 Outputs:
   InstanceProfileName:
