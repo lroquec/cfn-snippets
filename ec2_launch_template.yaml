@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: A template to create an EC2 instance with Apache installed and a test html page
+Resources:
+  SSMInstanceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: 'SSMInstanceRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'ec2.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+
+  SSMInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      InstanceProfileName: 'SSMInstanceProfile'
+      Roles:
+        - !Ref 'SSMInstanceRole'
+
+  MyInstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for EC2 instance
+      VpcId: !ImportValue MyVPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: EC2_SG
+
+  MyInstance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      SubnetId: !ImportValue MySubnet1Id
+      LaunchTemplate: 
+        LaunchTemplateId: !Ref MyLaunchTemplate
+        Version: !GetAtt MyLaunchTemplate.DefaultVersionNumber
+      IamInstanceProfile: !Ref 'SSMInstanceProfile'
+      Tags:
+        - Key: Name
+          Value: EC2_Apache
+
+  MyLaunchTemplate:
+    Type: 'AWS::EC2::LaunchTemplate'
+    Metadata: 
+      AWS::CloudFormation::Init: 
+        config:
+          files:
+            /var/www/html/index.html:
+              content: |
+                <!-- other-page/index.html -->
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>This is just a test page</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            text-align: center;
+                            margin-top: 50px;
+                            background-color: #a6dde1;
+                        }
+                        h1 {
+                            color: #333;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>Test header</h1>
+                    <p>Test paragraph</p>
+                </body>
+                </html>              
+    Properties:
+      LaunchTemplateData:
+        ImageId: ami-0ebfd941bbafe70c6
+        InstanceType: t2.micro
+        SecurityGroupIds:
+          - !Ref MyInstanceSecurityGroup
+        UserData:
+          Fn::Base64:
+            !Sub |
+              #!/bin/bash -xe
+              yum update -y aws-cfn-bootstrap
+              /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource MyLaunchTemplate --region ${AWS::Region}
+              yum -y update
+              yum install httpd -y
+              systemctl enable httpd --now
+
+Outputs:
+  InstanceProfileName:
+    Description: Name of the Instance Profile created
+    Value: !Ref 'SSMInstanceProfile'
+  PublicIp:
+    Description: Server Public IP
+    Value: !GetAtt MyInstance.PublicIp
