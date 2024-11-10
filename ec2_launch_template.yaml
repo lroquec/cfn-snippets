@@ -111,6 +111,20 @@ Resources:
               /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource MyLaunchTemplate --region ${AWS::Region}
               yum -y update
               yum install wget ruby httpd docker -y
+              echo "LoadModule proxy_module modules/mod_proxy.so" >> /etc/httpd/conf/httpd.conf
+              echo "LoadModule proxy_http_module modules/mod_proxy_http.so" >> /etc/httpd/conf/httpd.conf
+              cat <<EOT > /etc/httpd/conf.d/reverse-proxy.conf
+              <VirtualHost *:80>
+                  ServerAlias *
+                  ProxyPreserveHost On
+                  ProxyPass / http://localhost:5000/
+                  ProxyPassReverse / http://localhost:5000/
+                  RequestHeader set X-Forwarded-Proto "http"
+                  RequestHeader set X-Forwarded-Port "80"
+                  ErrorLog /var/log/httpd/error.log
+                  CustomLog /var/log/httpd/access.log combined
+              </VirtualHost>
+              EOT
               systemctl enable httpd --now
               systemctl enable docker --now
               usermod -aG docker ec2-user
